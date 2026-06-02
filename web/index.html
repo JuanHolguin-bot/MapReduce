@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TacticalShot - MapReduce Football Hotzones</title>
+    <!-- Google Fonts: Outfit for headers, Inter for UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-mode">
+    <div class="app-container">
+        <!-- Sidebar: Filters -->
+        <aside class="sidebar glass">
+            <div class="logo">
+                <i class="fa-solid fa-circle-nodes logo-icon"></i>
+                <div class="logo-text">
+                    <h1>TacticalShot</h1>
+                    <span>MapReduce Engine</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h2><i class="fa-solid fa-filter"></i> Filtros de Datos</h2>
+                
+                <div class="filter-group">
+                    <label for="filter-league">Liga</label>
+                    <div class="select-wrapper">
+                        <select id="filter-league">
+                            <option value="">Todas las ligas</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-team">Equipo</label>
+                    <div class="select-wrapper">
+                        <select id="filter-team" disabled>
+                            <option value="">Selecciona una liga primero</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-player">Buscar Jugador</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="filter-player" list="players-datalist" placeholder="Ej: Cristiano Ronaldo...">
+                        <datalist id="players-datalist"></datalist>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-season">Temporada</label>
+                    <div class="select-wrapper">
+                        <select id="filter-season">
+                            <option value="">Todas las temporadas</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h2><i class="fa-solid fa-sliders"></i> Filtros de Disparo</h2>
+                
+                <div class="filter-group">
+                    <label for="filter-situation">Situación de Juego</label>
+                    <div class="select-wrapper">
+                        <select id="filter-situation">
+                            <option value="">Todas las situaciones</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="filter-shot-type">Parte del Cuerpo</label>
+                    <div class="select-wrapper">
+                        <select id="filter-shot-type">
+                            <option value="">Cualquier parte</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="btn-reset" class="btn-reset">
+                <i class="fa-solid fa-arrow-rotate-left"></i> Restablecer Filtros
+            </button>
+            
+            <div class="sidebar-footer">
+                <p>Procesado con <strong>MapReduce</strong> local en base a ~442k disparos de las 5 Grandes Ligas europeas.</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header with Title and Metric Selectors -->
+            <header class="dashboard-header">
+                <div class="header-title">
+                    <div class="badge">Análisis Espacial</div>
+                    <h2>Hotzones de Disparos</h2>
+                </div>
+                
+                <!-- Metric Selector Buttons -->
+                <div class="metric-selector-container">
+                    <span class="selector-label">Métrica Visualizada:</span>
+                    <div class="metric-btn-group" id="metric-buttons">
+                        <button class="metric-btn active" data-metric="shots">
+                            <i class="fa-solid fa-futbol"></i> Disparos
+                        </button>
+                        <button class="metric-btn" data-metric="goals">
+                            <i class="fa-solid fa-crown"></i> Goles
+                        </button>
+                        <button class="metric-btn" data-metric="xg_sum">
+                            <i class="fa-solid fa-chart-line"></i> xG Total
+                        </button>
+                        <button class="metric-btn" data-metric="goal_rate">
+                            <i class="fa-solid fa-percent"></i> Conversión %
+                        </button>
+                        <button class="metric-btn" data-metric="avg_xg">
+                            <i class="fa-solid fa-bullseye"></i> xG Promedio
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Top Cards: Stats Summary -->
+            <section class="stats-summary-grid">
+                <div class="stat-card glass">
+                    <div class="stat-icon"><i class="fa-solid fa-futbol"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Disparos</h3>
+                        <p id="stat-shots">-</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card glass">
+                    <div class="stat-icon"><i class="fa-solid fa-crown"></i></div>
+                    <div class="stat-info">
+                        <h3>Total Goles</h3>
+                        <p id="stat-goals">-</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card glass">
+                    <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <h3>Expected Goals (xG)</h3>
+                        <p id="stat-xg">-</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card glass">
+                    <div class="stat-icon"><i class="fa-solid fa-percent"></i></div>
+                    <div class="stat-info">
+                        <h3>Efectividad</h3>
+                        <p id="stat-goal-rate">-</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card glass">
+                    <div class="stat-icon"><i class="fa-solid fa-bullseye"></i></div>
+                    <div class="stat-info">
+                        <h3>xG por Disparo</h3>
+                        <p id="stat-avg-xg">-</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Center Visualizations -->
+            <section class="visualizations-container">
+                <!-- Tactical Pitch Heatmap Card -->
+                <div class="pitch-card glass">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-chess-board"></i> Mapa de Calor Táctico</h3>
+                        <div class="pitch-legend" id="pitch-legend-colors">
+                            <span>Bajo</span>
+                            <div class="legend-bar"></div>
+                            <span>Alto</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pitch-wrapper">
+                        <!-- Custom high fidelity SVG tactical football pitch -->
+                        <div id="pitch-container" class="pitch-container">
+                            <svg id="football-pitch" viewBox="0 0 1000 650" preserveAspectRatio="xMidYMid meet">
+                                <!-- Background Pitch Fill -->
+                                <rect width="1000" height="650" class="pitch-field" />
+                                
+                                <!-- Pitch Markings (White Lines) -->
+                                <g class="pitch-lines">
+                                    <!-- Boundary lines -->
+                                    <rect x="50" y="30" width="900" height="590" fill="none" stroke-width="3" />
+                                    <!-- Halfway line -->
+                                    <line x1="500" y1="30" x2="500" y2="620" stroke-width="3" />
+                                    <!-- Center circle -->
+                                    <circle cx="500" cy="325" r="91.5" fill="none" stroke-width="3" />
+                                    <circle cx="500" cy="325" r="3" />
+                                    
+                                    <!-- Left Penalty Area -->
+                                    <rect x="50" y="138.5" width="165" height="373" fill="none" stroke-width="3" />
+                                    <rect x="50" y="248.5" width="55" height="153" fill="none" stroke-width="3" />
+                                    <circle cx="160" cy="325" r="3" />
+                                    <path d="M 215 264.5 A 91.5 91.5 0 0 1 215 385.5" fill="none" stroke-width="3" />
+                                    
+                                    <!-- Right Penalty Area (Attacking Area) -->
+                                    <rect x="785" y="138.5" width="165" height="373" fill="none" stroke-width="3" />
+                                    <rect x="895" y="248.5" width="55" height="153" fill="none" stroke-width="3" />
+                                    <circle cx="840" cy="325" r="3" />
+                                    <path d="M 785 264.5 A 91.5 91.5 0 0 0 785 385.5" fill="none" stroke-width="3" />
+                                    
+                                    <!-- Goals -->
+                                    <rect x="26" y="288" width="24" height="74" fill="none" stroke-width="3" />
+                                    <rect x="950" y="288" width="24" height="74" fill="none" stroke-width="3" />
+                                    
+                                    <!-- Corners -->
+                                    <path d="M 50 40 A 10 10 0 0 0 60 30" fill="none" stroke-width="3" />
+                                    <path d="M 50 610 A 10 10 0 0 1 60 620" fill="none" stroke-width="3" />
+                                    <path d="M 950 40 A 10 10 0 0 1 940 30" fill="none" stroke-width="3" />
+                                    <path d="M 950 610 A 10 10 0 0 0 940 620" fill="none" stroke-width="3" />
+                                </g>
+                                
+                                <!-- Heatmap Grid overlay -->
+                                <g id="heatmap-grid" class="heatmap-grid"></g>
+                            </svg>
+                            
+                            <!-- Detailed Zone Tooltip -->
+                            <div id="zone-tooltip" class="zone-tooltip hidden">
+                                <div class="tooltip-header">Zona (X, Y)</div>
+                                <div class="tooltip-body">
+                                    <div class="tooltip-row"><span>Disparos:</span><strong id="tt-shots">0</strong></div>
+                                    <div class="tooltip-row"><span>Goles:</span><strong id="tt-goals">0</strong></div>
+                                    <div class="tooltip-row"><span>xG Total:</span><strong id="tt-xg">0.000</strong></div>
+                                    <div class="tooltip-row"><span>Efectividad:</span><strong id="tt-conversion">0.0%</strong></div>
+                                    <div class="tooltip-row"><span>xG Promedio:</span><strong id="tt-avg-xg">0.000</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Side Panel: Stats breakdown & Top Players -->
+                <div class="analytics-panel">
+                    <!-- Top Players List -->
+                    <div class="analytics-card glass">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-ranking-star"></i> Top 10 Goleadores</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="players-table">
+                                <thead>
+                                    <tr>
+                                        <th>Jugador</th>
+                                        <th class="num-col">Disp</th>
+                                        <th class="num-col">Goles</th>
+                                        <th class="num-col">xG</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-players-list">
+                                    <tr>
+                                        <td colspan="4" class="loading-cell">Cargando goleadores...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Breakdowns charts -->
+                    <div class="analytics-card glass">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-chart-pie"></i> Desglose de Disparos</h3>
+                        </div>
+                        <div class="charts-wrapper">
+                            <div class="chart-section">
+                                <h4>Parte del Cuerpo</h4>
+                                <div class="bar-chart" id="bodypart-breakdown">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+                            <div class="chart-section">
+                                <h4>Situación del Disparo</h4>
+                                <div class="bar-chart" id="situation-breakdown">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
