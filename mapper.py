@@ -44,15 +44,46 @@ def build_group_key(
     return tuple(key_parts)
 
 
+def passes_filters(shot: Dict[str, Any], filters: Dict[str, str]) -> bool:
+    if not filters:
+        return True
+    for k, v in filters.items():
+        if not v:
+            continue
+        if str(shot.get(k, "")) != str(v):
+            return False
+    return True
+
+
 def mapper(
     rows: Iterable[Dict[str, str]],
-    group_by: Sequence[str],
+    filters: Dict[str, str] = None,
     x_bins: int = 12,
     y_bins: int = 8,
 ) -> Iterable[Tuple[Tuple[Any, ...], ShotMetrics]]:
+    if filters is None:
+        filters = {}
+        
     for raw_row in rows:
         shot = parse_shot_row(raw_row)
-        key = build_group_key(shot, group_by, x_bins, y_bins)
+        if not passes_filters(shot, filters):
+            continue
+            
         metrics = ShotMetrics()
         metrics.update(shot["result"], shot["xg"])
-        yield key, metrics
+        
+        # Emit 1: Grid Zones
+        zx, zy = pitch_zone(shot["x"], shot["y"], x_bins, y_bins)
+        yield ("grid", zx, zy), metrics
+        
+        # Emit 2: Top Players
+        yield ("player", shot["player"]), metrics
+        
+        # Emit 3: Shot Types
+        yield ("shot_type", shot["shot_type"]), metrics
+        
+        # Emit 4: Situations
+        yield ("situation", shot["situation"]), metrics
+        
+        # Emit 5: Global Summary
+        yield ("global", "summary"), metrics

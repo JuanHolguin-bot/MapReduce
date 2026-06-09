@@ -3,6 +3,7 @@ import os
 import sqlite3
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from master import run_distributed_mapreduce_background, job_status
 
 class ShotVisualizerHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -25,6 +26,12 @@ class ShotVisualizerHandler(BaseHTTPRequestHandler):
             self.handle_api_players(params)
         elif path == "/api/data":
             self.handle_api_data(params)
+        elif path == "/api/start_job":
+            self.handle_api_start_job(params)
+        elif path == "/api/job_status":
+            self.handle_api_job_status()
+        elif path == "/api/job_result":
+            self.handle_api_job_result()
         else:
             # Serve static files from the 'web' directory
             self.handle_static_files(path)
@@ -284,6 +291,26 @@ class ShotVisualizerHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
+
+    def handle_api_start_job(self, params):
+        filters = {k: v for k, v in params.items() if v}
+        success = run_distributed_mapreduce_background(
+            csv_path="shots_dataset_cleaned.csv",
+            filters=filters
+        )
+        if success:
+            self.send_json_response({"status": "started"})
+        else:
+            self.send_error(400, "Job is already running or in error state")
+
+    def handle_api_job_status(self):
+        self.send_json_response(job_status.to_dict())
+
+    def handle_api_job_result(self):
+        if job_status.final_result:
+            self.send_json_response(job_status.final_result)
+        else:
+            self.send_error(404, "Job result not available yet.")
 
 def run_server(port=8080):
     # Ensure static web dir exists

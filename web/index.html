@@ -131,6 +131,30 @@
                 </div>
             </header>
 
+            <!-- MapReduce Cluster Monitor -->
+            <section class="cluster-monitor glass" style="margin-bottom: 24px;">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-server"></i> MapReduce Cluster Monitor</h3>
+                    <button id="btn-start-job" class="btn-primary">
+                        <i class="fa-solid fa-play"></i> Procesar Filtros con MapReduce
+                    </button>
+                </div>
+                
+                <div class="job-status-container">
+                    <div class="job-state">
+                        <span id="mr-state-badge" class="state-badge idle">Inactivo</span>
+                        <span id="mr-message" class="state-message">Listo para iniciar.</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="mr-progress-fill" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="workers-grid" id="workers-grid">
+                    <!-- Workers status injected via JS -->
+                </div>
+            </section>
+
             <!-- Top Cards: Stats Summary -->
             <section class="stats-summary-grid">
                 <div class="stat-card glass">
