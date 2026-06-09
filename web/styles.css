@@ -158,6 +158,11 @@ body {
     transition: var(--transition-smooth);
 }
 
+.select-wrapper select option {
+    background: var(--bg-sidebar);
+    color: var(--text-primary);
+}
+
 .select-wrapper select:focus {
     border-color: var(--accent-color);
     box-shadow: 0 0 0 3px var(--accent-glow);
