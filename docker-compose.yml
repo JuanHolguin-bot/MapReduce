@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  master:
+    build: .
+    command: python server.py
+    ports:
+      - "8080:8080"
+    environment:
+      - WORKERS=http://worker1:8000,http://worker2:8000,http://worker3:8000
+    volumes:
+      - .:/app
+
+  worker1:
+    build: .
+    command: uvicorn worker:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+
+  worker2:
+    build: .
+    command: uvicorn worker:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+
+  worker3:
+    build: .
+    command: uvicorn worker:app --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app

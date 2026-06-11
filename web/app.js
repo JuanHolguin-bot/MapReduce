@@ -57,14 +57,21 @@ const dom = {
     ttGoals: document.getElementById('tt-goals'),
     ttXg: document.getElementById('tt-xg'),
     ttConversion: document.getElementById('tt-conversion'),
-    ttAvgXg: document.getElementById('tt-avg-xg')
+    ttAvgXg: document.getElementById('tt-avg-xg'),
+    
+    // Cluster Monitor
+    btnStartJob: document.getElementById('btn-start-job'),
+    mrStateBadge: document.getElementById('mr-state-badge'),
+    mrMessage: document.getElementById('mr-message'),
+    mrProgressFill: document.getElementById('mr-progress-fill'),
+    workersGrid: document.getElementById('workers-grid')
 };
 
 // Initialize Application
 async function init() {
     setupEventListeners();
     await fetchInitialFilters();
-    await updateDashboardData();
+    // Do not call updateDashboardData() initially, let user trigger it.
 }
 
 // Event Listeners setup
@@ -75,15 +82,12 @@ function setupEventListeners() {
     dom.playerSelect.addEventListener('input', handlePlayerChange);
     dom.seasonSelect.addEventListener('change', (e) => {
         state.filters.season = e.target.value;
-        updateDashboardData();
     });
     dom.situationSelect.addEventListener('change', (e) => {
         state.filters.situation = e.target.value;
-        updateDashboardData();
     });
     dom.shotTypeSelect.addEventListener('change', (e) => {
         state.filters.shot_type = e.target.value;
-        updateDashboardData();
     });
 
     // Reset button
@@ -100,6 +104,9 @@ function setupEventListeners() {
             renderHeatmap();
         });
     });
+
+    // MapReduce Job Start
+    dom.btnStartJob.addEventListener('click', startMapReduceJob);
 }
 
 // Fetch Initial Dropdowns (Leagues, Seasons, Situations, Bodyparts)
@@ -189,7 +196,6 @@ async function handleLeagueChange(e) {
     
     // Refresh players datalist for the selected league
     await populatePlayersDatalist();
-    updateDashboardData();
 }
 
 // Handle Team Dropdown Change (Cascades to Players)
@@ -203,13 +209,11 @@ async function handleTeamChange(e) {
     
     // Refresh players datalist for the selected team/league
     await populatePlayersDatalist();
-    updateDashboardData();
 }
 
 // Handle Player Input Search Change
 function handlePlayerChange(e) {
     state.filters.player = e.target.value;
-    updateDashboardData();
 }
 
 // Populates players autocomplete list based on league/team selections
@@ -262,7 +266,12 @@ async function resetFilters() {
     };
     
     await populatePlayersDatalist();
-    updateDashboardData();
+    
+    state.currentData = null;
+    renderStatsSummary();
+    renderHeatmap();
+    renderTopPlayers();
+    renderBreakdowns();
 }
 
 // Query main dashboard data from server
@@ -541,6 +550,101 @@ function createChartRow(label, count, pct) {
     `;
     
     return row;
+}
+
+// ==========================================
+// Distributed MapReduce Logic
+// ==========================================
+
+let statusInterval = null;
+
+async function startMapReduceJob() {
+    try {
+        dom.btnStartJob.disabled = true;
+        
+        // Build query string
+        const params = new URLSearchParams();
+        for (const [k, v] of Object.entries(state.filters)) {
+            if (v) params.append(k, v);
+        }
+        
+        const response = await fetch(`/api/start_job?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to start job");
+        
+        // Start polling status
+        if (statusInterval) clearInterval(statusInterval);
+        statusInterval = setInterval(pollJobStatus, 500);
+        pollJobStatus(); // fetch immediately
+    } catch (err) {
+        console.error(err);
+        dom.btnStartJob.disabled = false;
+        alert("Error starting MapReduce job");
+    }
+}
+
+async function pollJobStatus() {
+    try {
+        const response = await fetch('/api/job_status');
+        const data = await response.json();
+        
+        renderJobStatus(data);
+        
+        if (data.state === 'finished' || data.state === 'error') {
+            clearInterval(statusInterval);
+            dom.btnStartJob.disabled = false;
+            
+            if (data.state === 'finished') {
+                // Fetch the final result!
+                const res = await fetch('/api/job_result');
+                const finalData = await res.json();
+                state.currentData = finalData;
+                
+                renderStatsSummary();
+                renderHeatmap();
+                renderTopPlayers();
+                renderBreakdowns();
+            }
+        }
+    } catch (err) {
+        console.error("Error polling status", err);
+    }
+}
+
+function renderJobStatus(data) {
+    // Update badge
+    dom.mrStateBadge.className = `state-badge ${data.state}`;
+    let stateText = data.state.toUpperCase();
+    if (data.state === 'mapping') stateText = 'MAP';
+    else if (data.state === 'reducing') stateText = 'REDUCE';
+    else if (data.state === 'shuffling') stateText = 'SHUFFLE';
+    dom.mrStateBadge.textContent = stateText;
+    
+    // Update message and progress
+    dom.mrMessage.textContent = data.message;
+    dom.mrProgressFill.style.width = `${data.progress}%`;
+    
+    // Render workers
+    dom.workersGrid.innerHTML = '';
+    
+    Object.entries(data.worker_status).forEach(([url, status], i) => {
+        const isActive = status !== 'idle' && status !== 'error';
+        const iconClass = isActive ? 'fa-solid fa-gear active worker-icon' : 'fa-solid fa-server worker-icon';
+        const colorStyle = isActive ? 'color: #3b82f6;' : 'color: var(--text-secondary);';
+        
+        const name = `Worker ${i+1}`;
+        
+        const card = document.createElement('div');
+        card.className = 'worker-card';
+        card.innerHTML = `
+            <div class="worker-header">
+                <i class="${iconClass}" style="${colorStyle}"></i> ${name}
+            </div>
+            <div class="worker-status" title="${status}">
+                ${status}
+            </div>
+        `;
+        dom.workersGrid.appendChild(card);
+    });
 }
 
 // Start application
